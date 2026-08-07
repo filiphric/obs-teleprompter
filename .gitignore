@@ -1,0 +1,5 @@
+/build/
+/release/
+/dist/
+/.cache/
+.DS_Store
