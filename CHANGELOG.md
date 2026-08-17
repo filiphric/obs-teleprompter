@@ -6,6 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-17
+
+### Added
+
+- Installable macOS Universal and Windows x64 packages in GitHub Releases.
+- Clear platform-specific asset names and explicit source-package names.
+
 ## [0.1.0] - 2026-08-17
 
 ### Added
@@ -16,5 +23,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Keyboard controls and persistent settings.
 - Centered fullscreen lead-in and ending space with non-shifting control overlays.
 
-[Unreleased]: https://github.com/filiphric/obs-teleprompter/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/filiphric/obs-teleprompter/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/filiphric/obs-teleprompter/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/filiphric/obs-teleprompter/releases/tag/v0.1.0

@@ -1,87 +1,46 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.28...3.30)
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" PROJECT_VERSION LIMIT_COUNT 1)
 if(NOT PROJECT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
   message(FATAL_ERROR "VERSION must contain a SemVer core version such as 1.2.3")
 endif()
-
-project(obs-teleprompter VERSION "${PROJECT_VERSION}" LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
-
-set(OBS_SOURCE_DIR "" CACHE PATH "Path to a matching OBS Studio source tree")
-set(OBS_APP_DIR "/Applications/OBS.app" CACHE PATH "Path to OBS.app on macOS")
-
-find_package(libobs QUIET)
-find_package(obs-frontend-api QUIET)
-
-if(NOT TARGET OBS::libobs OR NOT TARGET OBS::obs-frontend-api)
-  if(NOT APPLE OR NOT EXISTS "${OBS_SOURCE_DIR}/libobs/obs-module.h")
-    message(FATAL_ERROR "OBS development packages were not found. On macOS, set OBS_SOURCE_DIR to a matching OBS source tree.")
-  endif()
-
-  add_library(OBS::libobs SHARED IMPORTED GLOBAL)
-  set_target_properties(OBS::libobs PROPERTIES
-    IMPORTED_LOCATION "${OBS_APP_DIR}/Contents/Frameworks/libobs.framework/Versions/A/libobs"
-    INTERFACE_INCLUDE_DIRECTORIES "${OBS_SOURCE_DIR}/libobs"
-  )
-
-  add_library(OBS::obs-frontend-api SHARED IMPORTED GLOBAL)
-  set_target_properties(OBS::obs-frontend-api PROPERTIES
-    IMPORTED_LOCATION "${OBS_APP_DIR}/Contents/Frameworks/obs-frontend-api.dylib"
-    INTERFACE_INCLUDE_DIRECTORIES "${OBS_SOURCE_DIR}/frontend/api;${OBS_SOURCE_DIR}/libobs"
-  )
-
-  set(OBS_DATA_PATH "../Resources")
-  set(OBS_PLUGIN_PATH "../PlugIns")
-  set(OBS_PLUGIN_DESTINATION "obs-plugins")
-  set(OBS_RELEASE_CANDIDATE 0)
-  set(OBS_BETA 0)
-  configure_file("${OBS_SOURCE_DIR}/libobs/obsconfig.h.in" "${CMAKE_CURRENT_BINARY_DIR}/generated/obsconfig.h")
-  set_property(TARGET OBS::libobs APPEND PROPERTY
-    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_BINARY_DIR}/generated"
-  )
+if(NOT PROJECT_VERSION STREQUAL _version)
+  message(FATAL_ERROR "VERSION (${PROJECT_VERSION}) and buildspec.json (${_version}) must match")
 endif()
+
+project(${_name} VERSION "${PROJECT_VERSION}" LANGUAGES CXX)
+
+include(compilerconfig)
+include(defaults)
+include(helpers)
+
+add_library(${CMAKE_PROJECT_NAME} MODULE)
+
+find_package(libobs REQUIRED)
+find_package(obs-frontend-api REQUIRED)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
-add_library(${PROJECT_NAME} MODULE
-  src/plugin-main.cpp
-  src/teleprompter-window.cpp
-  src/teleprompter-window.hpp
+target_sources(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE src/plugin-main.cpp src/teleprompter-window.cpp src/teleprompter-window.hpp
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-  OBS::libobs
-  OBS::obs-frontend-api
-  Qt6::Core
-  Qt6::Widgets
+target_link_libraries(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE OBS::libobs OBS::obs-frontend-api Qt6::Core Qt6::Widgets
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-  PLUGIN_NAME="${PROJECT_NAME}"
-  PLUGIN_VERSION="${PROJECT_VERSION}"
+target_compile_features(${CMAKE_PROJECT_NAME} PRIVATE cxx_std_17)
+target_compile_definitions(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE PLUGIN_NAME="${CMAKE_PROJECT_NAME}" PLUGIN_VERSION="${PROJECT_VERSION}"
+)
+target_compile_options(
+  ${CMAKE_PROJECT_NAME}
+  PRIVATE $<$<CXX_COMPILER_ID:Clang,AppleClang>:-Wno-quoted-include-in-framework-header -Wno-comma>
 )
 
-find_path(SIMDE_INCLUDE_DIR simde/x86/sse2.h
-  HINTS /opt/homebrew/opt/simde/include /usr/local/include /usr/include
-)
-if(SIMDE_INCLUDE_DIR)
-  target_include_directories(${PROJECT_NAME} PRIVATE "${SIMDE_INCLUDE_DIR}")
-endif()
-
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
-
-if(COMMAND add_obs_plugin)
-  add_obs_plugin(${PROJECT_NAME} WITH_MESSAGE)
-endif()
-
-include(GNUInstallDirs)
-install(TARGETS ${PROJECT_NAME}
-  LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/obs-plugins"
-  RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/64bit"
-)
-install(DIRECTORY data/
-  DESTINATION "${CMAKE_INSTALL_DATADIR}/obs/obs-plugins/${PROJECT_NAME}"
-)
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON)
+set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

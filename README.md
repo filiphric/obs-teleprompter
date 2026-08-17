@@ -23,27 +23,36 @@ A native OBS Studio plugin that opens a teleprompter in its own window. Scripts 
 
 ## Build
 
-This project requires the OBS Studio development libraries, the OBS frontend API, Qt 6, CMake 3.20+, and a C++17 compiler.
+This project uses the official OBS plugin build infrastructure and requires CMake 3.28+, a C++17 compiler, and the platform tools listed by the [OBS plugin template](https://github.com/obsproject/obs-plugintemplate). Pinned OBS and Qt dependencies are downloaded automatically.
 
 ```sh
-cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build --config RelWithDebInfo
-cmake --install build --config RelWithDebInfo
+cmake --preset macos
+cmake --build --preset macos
 ```
 
-Depending on how OBS was installed, pass `CMAKE_PREFIX_PATH` so CMake can find OBS and Qt. Restart OBS after installing the plugin.
+On Windows, use the `windows-x64` preset instead. Restart OBS after installing the plugin.
+
+## Install a release
+
+Download the file for your computer from [GitHub Releases](https://github.com/filiphric/obs-teleprompter/releases):
+
+- **macOS (Apple Silicon or Intel):** `OBS-Teleprompter-<version>-macOS-Universal.pkg`
+- **Windows 64-bit:** `OBS-Teleprompter-<version>-Windows-x64.zip`
+- Files containing `Source` are for developers and are not ready-to-install plugins.
+
+On Windows, extract the ZIP into `%APPDATA%\obs-studio\plugins`, preserving the included folder structure. On macOS, open the PKG installer. The macOS package is currently unsigned, so macOS may require confirmation in **System Settings → Privacy & Security**.
 
 ## Versions and releases
 
-This project follows [Semantic Versioning](https://semver.org/). The current version lives in [`VERSION`](VERSION) and is used by CMake and the plugin at build time.
+This project follows [Semantic Versioning](https://semver.org/). The current version lives in [`VERSION`](VERSION), is mirrored in `buildspec.json` for the OBS packaging tools, and is validated by CMake and the release workflow.
 
 To publish a release:
 
-1. Update `VERSION` and `CHANGELOG.md` in a pull request or commit.
+1. Update `VERSION`, the `version` in `buildspec.json`, and `CHANGELOG.md` in a pull request or commit.
 2. Tag that commit with the matching version, for example `v0.2.0`.
 3. Push the tag: `git push origin v0.2.0`.
 
-The release workflow validates the tag, creates `.tar.gz` and `.zip` source archives, generates SHA-256 checksums, and publishes a GitHub Release with generated notes. Tags and versions must use `MAJOR.MINOR.PATCH`; increment the major version for incompatible changes, minor for backward-compatible features, and patch for backward-compatible fixes.
+The release workflow validates the tag, builds macOS Universal and Windows x64 packages, creates explicitly named source archives, generates SHA-256 checksums, and publishes a GitHub Release with generated notes. Tags and versions must use `MAJOR.MINOR.PATCH`; increment the major version for incompatible changes, minor for backward-compatible features, and patch for backward-compatible fixes.
 
 ## Roadmap
 

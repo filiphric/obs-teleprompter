@@ -1,4 +1,7 @@
 /build/
+/build_macos/
+/build_x64/
+/.deps/
 /release/
 /dist/
 /.cache/

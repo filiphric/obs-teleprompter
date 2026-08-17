@@ -15,10 +15,12 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Validate and publish
+  validate:
+    name: Validate version
     runs-on: ubuntu-24.04
-
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - name: Resolve tag
         id: release
@@ -27,51 +29,126 @@ jobs:
           MANUAL_TAG: ${{ inputs.tag || '' }}
         run: |
           tag="${PUSH_TAG:-$MANUAL_TAG}"
-          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
-            echo "Invalid SemVer tag: $tag" >&2
+          if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid release tag: $tag (expected vMAJOR.MINOR.PATCH)" >&2
             exit 1
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
 
-      - name: Check out release tag
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ steps.release.outputs.tag }}
+
+      - name: Match project versions
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          file_version="$(tr -d '[:space:]' < VERSION)"
+          spec_version="$(jq -r .version buildspec.json)"
+          [[ "$file_version" == "$VERSION" ]] || { echo "VERSION does not match tag" >&2; exit 1; }
+          [[ "$spec_version" == "$VERSION" ]] || { echo "buildspec.json does not match tag" >&2; exit 1; }
+
+  macos:
+    name: Build macOS Universal
+    needs: validate
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
           fetch-depth: 0
 
-      - name: Validate project version
-        env:
-          TAG: ${{ steps.release.outputs.tag }}
-        run: |
-          version="$(tr -d '[:space:]' < VERSION)"
-          tag_core="${TAG#v}"
-          tag_core="${tag_core%%-*}"
-          tag_core="${tag_core%%+*}"
-          if [[ "$version" != "$tag_core" ]]; then
-            echo "VERSION ($version) does not match tag ($TAG)" >&2
-            exit 1
-          fi
+      - name: Build plugin
+        uses: ./.github/actions/build-plugin
+        with:
+          target: macos-universal
+          config: Release
+          codesign: false
 
-      - name: Create release archives
+      - name: Create macOS installer
+        uses: ./.github/actions/package-plugin
+        with:
+          target: macos-universal
+          config: Release
+          package: true
+          codesign: false
+          notarize: false
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-package
+          path: release/obs-teleprompter-${{ needs.validate.outputs.version }}-macos-universal.pkg
+          if-no-files-found: error
+
+  windows:
+    name: Build Windows x64
+    needs: validate
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+
+      - name: Build plugin
+        uses: ./.github/actions/build-plugin
+        with:
+          target: x64
+          config: Release
+
+      - name: Create Windows archive
+        uses: ./.github/actions/package-plugin
+        with:
+          target: x64
+          config: Release
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: release/obs-teleprompter-${{ needs.validate.outputs.version }}-windows-x64.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish user-ready release
+    needs: [validate, macos, windows]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Name release files for users
         env:
-          TAG: ${{ steps.release.outputs.tag }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          mkdir -p release
-          prefix="obs-teleprompter-${TAG#v}/"
-          git archive --format=tar.gz --prefix="$prefix" -o "release/obs-teleprompter-${TAG#v}.tar.gz" "$TAG"
-          git archive --format=zip --prefix="$prefix" -o "release/obs-teleprompter-${TAG#v}.zip" "$TAG"
-          cd release
-          sha256sum *.tar.gz *.zip > SHA256SUMS
+          mkdir -p release-assets
+          mv "packages/obs-teleprompter-${VERSION}-macos-universal.pkg" \
+            "release-assets/OBS-Teleprompter-${VERSION}-macOS-Universal.pkg"
+          mv "packages/obs-teleprompter-${VERSION}-windows-x64.zip" \
+            "release-assets/OBS-Teleprompter-${VERSION}-Windows-x64.zip"
+          git archive --format=tar.gz --prefix="obs-teleprompter-${VERSION}/" \
+            -o "release-assets/OBS-Teleprompter-${VERSION}-Source.tar.gz" "$TAG"
+          git archive --format=zip --prefix="obs-teleprompter-${VERSION}/" \
+            -o "release-assets/OBS-Teleprompter-${VERSION}-Source.zip" "$TAG"
+          cd release-assets
+          sha256sum * > SHA256SUMS.txt
 
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ steps.release.outputs.tag }}
+          TAG: ${{ needs.validate.outputs.tag }}
         run: |
-          prerelease=()
-          [[ "$TAG" == *-* ]] && prerelease+=(--prerelease)
-          gh release create "$TAG" release/* \
+          gh release create "$TAG" release-assets/* \
             --verify-tag \
             --generate-notes \
-            --title "OBS Teleprompter $TAG" \
-            "${prerelease[@]}"
+            --title "OBS Teleprompter $TAG"
