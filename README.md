@@ -33,6 +33,18 @@ cmake --install build --config RelWithDebInfo
 
 Depending on how OBS was installed, pass `CMAKE_PREFIX_PATH` so CMake can find OBS and Qt. Restart OBS after installing the plugin.
 
+## Versions and releases
+
+This project follows [Semantic Versioning](https://semver.org/). The current version lives in [`VERSION`](VERSION) and is used by CMake and the plugin at build time.
+
+To publish a release:
+
+1. Update `VERSION` and `CHANGELOG.md` in a pull request or commit.
+2. Tag that commit with the matching version, for example `v0.2.0`.
+3. Push the tag: `git push origin v0.2.0`.
+
+The release workflow validates the tag, creates `.tar.gz` and `.zip` source archives, generates SHA-256 checksums, and publishes a GitHub Release with generated notes. Tags and versions must use `MAJOR.MINOR.PATCH`; increment the major version for incompatible changes, minor for backward-compatible features, and patch for backward-compatible fixes.
+
 ## Roadmap
 
 Scene overlays and other broadcast integrations are intentionally left for a later version.
