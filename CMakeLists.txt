@@ -44,3 +44,12 @@ target_compile_options(
 
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES AUTOMOC ON AUTOUIC ON AUTORCC ON)
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})
+
+# A standalone renderer keeps the README screenshot in sync with the real UI.
+# It is built by the release workflow and is not installed with the plugin.
+add_executable(obs-teleprompter-screenshot
+  EXCLUDE_FROM_ALL src/screenshot-main.cpp src/teleprompter-window.cpp src/teleprompter-window.hpp
+)
+target_link_libraries(obs-teleprompter-screenshot PRIVATE Qt6::Core Qt6::Widgets)
+target_compile_features(obs-teleprompter-screenshot PRIVATE cxx_std_17)
+set_target_properties(obs-teleprompter-screenshot PROPERTIES AUTOMOC ON)

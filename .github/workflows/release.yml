@@ -75,11 +75,24 @@ jobs:
           codesign: false
           notarize: false
 
+      - name: Render current README screenshot
+        run: |
+          cmake --build build_macos --config RelWithDebInfo --target obs-teleprompter-screenshot
+          mkdir -p screenshot
+          build_macos/RelWithDebInfo/obs-teleprompter-screenshot screenshot/obs-teleprompter.png
+
       - name: Upload macOS package
         uses: actions/upload-artifact@v4
         with:
           name: macos-package
           path: release/obs-teleprompter-${{ needs.validate.outputs.version }}-macos-universal.pkg
+          if-no-files-found: error
+
+      - name: Upload README screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme-screenshot
+          path: screenshot/obs-teleprompter.png
           if-no-files-found: error
 
   windows:
@@ -136,6 +149,11 @@ jobs:
             "release-assets/OBS-Teleprompter-${VERSION}-macOS-Universal.pkg"
           mv "packages/obs-teleprompter-${VERSION}-windows-x64.zip" \
             "release-assets/OBS-Teleprompter-${VERSION}-Windows-x64.zip"
+          cp "release-assets/OBS-Teleprompter-${VERSION}-macOS-Universal.pkg" \
+            "release-assets/OBS-Teleprompter-macOS-Universal.pkg"
+          cp "release-assets/OBS-Teleprompter-${VERSION}-Windows-x64.zip" \
+            "release-assets/OBS-Teleprompter-Windows-x64.zip"
+          mv "packages/obs-teleprompter.png" "release-assets/obs-teleprompter.png"
           git archive --format=tar.gz --prefix="obs-teleprompter-${VERSION}/" \
             -o "release-assets/OBS-Teleprompter-${VERSION}-Source.tar.gz" "$TAG"
           git archive --format=zip --prefix="obs-teleprompter-${VERSION}/" \
