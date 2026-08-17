@@ -44,9 +44,9 @@ jobs:
         env:
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          file_version="$(tr -d '[:space:]' < VERSION)"
+          file_version="$(tr -d '[:space:]' < VERSION.txt)"
           spec_version="$(jq -r .version buildspec.json)"
-          [[ "$file_version" == "$VERSION" ]] || { echo "VERSION does not match tag" >&2; exit 1; }
+          [[ "$file_version" == "$VERSION" ]] || { echo "VERSION.txt does not match tag" >&2; exit 1; }
           [[ "$spec_version" == "$VERSION" ]] || { echo "buildspec.json does not match tag" >&2; exit 1; }
 
   macos:

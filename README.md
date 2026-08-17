@@ -44,11 +44,11 @@ On Windows, extract the ZIP into `%APPDATA%\obs-studio\plugins`, preserving the 
 
 ## Versions and releases
 
-This project follows [Semantic Versioning](https://semver.org/). The current version lives in [`VERSION`](VERSION), is mirrored in `buildspec.json` for the OBS packaging tools, and is validated by CMake and the release workflow.
+This project follows [Semantic Versioning](https://semver.org/). The current version lives in [`VERSION.txt`](VERSION.txt), is mirrored in `buildspec.json` for the OBS packaging tools, and is validated by CMake and the release workflow.
 
 To publish a release:
 
-1. Update `VERSION`, the `version` in `buildspec.json`, and `CHANGELOG.md` in a pull request or commit.
+1. Update `VERSION.txt`, the `version` in `buildspec.json`, and `CHANGELOG.md` in a pull request or commit.
 2. Tag that commit with the matching version, for example `v0.2.0`.
 3. Push the tag: `git push origin v0.2.0`.
 

@@ -2,12 +2,12 @@ cmake_minimum_required(VERSION 3.28...3.30)
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/common/bootstrap.cmake" NO_POLICY_SCOPE)
 
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" PROJECT_VERSION LIMIT_COUNT 1)
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt" PROJECT_VERSION LIMIT_COUNT 1)
 if(NOT PROJECT_VERSION MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
-  message(FATAL_ERROR "VERSION must contain a SemVer core version such as 1.2.3")
+  message(FATAL_ERROR "VERSION.txt must contain a SemVer core version such as 1.2.3")
 endif()
 if(NOT PROJECT_VERSION STREQUAL _version)
-  message(FATAL_ERROR "VERSION (${PROJECT_VERSION}) and buildspec.json (${_version}) must match")
+  message(FATAL_ERROR "VERSION.txt (${PROJECT_VERSION}) and buildspec.json (${_version}) must match")
 endif()
 
 project(${_name} VERSION "${PROJECT_VERSION}" LANGUAGES CXX)
